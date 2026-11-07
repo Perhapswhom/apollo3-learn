@@ -1,15 +1,18 @@
 // 动画脚本引擎："运行"按钮背后的东西
 // 它不编译代码，而是照着每节课写好的"剧本"（behavior），按时间点亮 LED、高亮代码、打印串口
+// 第 12 步新增：剧本能响应"点 3D 零件"和"串口输入"，滑块可以不重启就生效
 
 export function createRunner({ stage, board, code, scope, onStart }) {
   const btn = document.querySelector('#run-btn')
   const serial = document.querySelector('#serial')
+  const input = document.querySelector('#serial-input')
   let lesson = null
-  let current = null // 正在跑的剧本：{ timers, cleanup }
+  let current = null // 正在跑的剧本：{ timers, cleanup, presses, inputs, p }
   let now = 0
 
   function print(text) {
     serial.textContent += text + '\n'
+    if (serial.textContent.length > 6000) serial.textContent = serial.textContent.slice(-4000) // 别无限变长
     serial.scrollTop = serial.scrollHeight
   }
 
@@ -25,7 +28,8 @@ export function createRunner({ stage, board, code, scope, onStart }) {
         else tm.done = true
       }
     }
-    if (current) current.timers = current.timers.filter((tm) => !tm.done)
+    // 删掉跑完的（原地删，不换新数组：剧本里的 ctx.after 一直往同一个数组里加）
+    if (current) for (let i = current.timers.length - 1; i >= 0; i--) if (current.timers[i].done) current.timers.splice(i, 1)
   })
 
   function start() {
@@ -33,17 +37,25 @@ export function createRunner({ stage, board, code, scope, onStart }) {
     stop()
     serial.textContent = ''
     const timers = []
+    const presses = {} // 零件 id → 被点时要做的事
+    const inputs = []  // 串口收到一行字时要做的事
+    const p = code.values()
     // ctx = 给剧本用的"遥控器"
     const ctx = {
       after: (ms, fn) => timers.push({ at: now + ms, fn }),           // ms 毫秒后做一次
       every: (ms, fn) => timers.push({ at: now + ms, every: ms, fn }), // 每隔 ms 毫秒做一次
+      now: () => now,                                                 // 现在的时间（毫秒）
       line: (text) => code.highlight(text),                           // 高亮含这段文字的代码行
-      led: (id, on) => board.setLed(id, on),                          // 开关 LED
+      led: (id, on) => board.setLed(id, on),                          // 开关 LED，也可以给 0~1 的亮度
       print,                                                          // 串口打印
-      power: (state, ms) => scope?.set(state, ms),                    // 告诉示波器：醒着/睡着
+      power: (state, ms) => scope?.set(state, ms),                    // 告诉示波器：醒着/睡着/射频
+      onPress: (id, fn) => { presses[id] = fn },                      // 用户点了某个 3D 零件
+      onInput: (fn) => inputs.push(fn),                               // 用户在串口输入框里按了回车
+      board,                                                          // 配件遥控器：setKnob、setPhone、wave…
     }
-    current = { timers, cleanup: null }
-    current.cleanup = lesson.behavior(ctx, code.values()) || null
+    current = { timers, cleanup: null, presses, inputs, p }
+    board.reset?.()
+    current.cleanup = lesson.behavior(ctx, p) || null
     btn.textContent = '■ 停止'
     btn.classList.add('running')
     onStart?.(lesson)
@@ -54,6 +66,7 @@ export function createRunner({ stage, board, code, scope, onStart }) {
     current.cleanup?.()
     current = null
     ;['led0', 'led1', 'led2'].forEach((id) => board.setLed(id, false))
+    board.reset?.()
     code.highlight(null)
     scope?.set(null)
     btn.textContent = '▶ 运行'
@@ -62,9 +75,35 @@ export function createRunner({ stage, board, code, scope, onStart }) {
 
   btn.addEventListener('click', () => (current ? stop() : start()))
 
+  // 串口输入框：回车就把这一行"发给板子"
+  input.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !input.value.trim()) return
+    const text = input.value
+    input.value = ''
+    if (!current) { print('（先点"运行"，板子才会收）'); return }
+    print(`> ${text}`)
+    current.inputs.forEach((fn) => fn(text))
+  })
+
   return {
-    setLesson(l) { stop(); lesson = l; serial.textContent = '' },
+    setLesson(l) {
+      stop()
+      lesson = l
+      serial.textContent = ''
+      input.classList.toggle('hidden', !l.serialInput) // 这节课要输入才显示输入框
+    },
     restart() { if (current) start() }, // 跑着的时候改了参数，就用新参数重来
+    // 滑块变了：标了 live 的参数直接生效（剧本下次读 p.xxx 就是新值），其余的重跑
+    paramChanged(key, values) {
+      if (!current) return
+      if (lesson.params?.[key]?.live) Object.assign(current.p, values)
+      else start()
+    },
+    // 用户点了 3D 零件：按键先做个"按下去"的动作，再交给剧本
+    press(id) {
+      board.press?.(id)
+      current?.presses[id]?.()
+    },
     stop,
   }
 }

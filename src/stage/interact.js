@@ -33,6 +33,12 @@ function frameGeometry(w, d) {
   return new THREE.ShapeGeometry(outer)
 }
 
+// 这个物体现在看得见吗？（它和它的上级都没被藏起来）
+function isShown(o) {
+  for (; o; o = o.parent) if (!o.visible) return false
+  return true
+}
+
 // ② 点击零件：从鼠标位置往场景里"射一根激光"（Raycaster），看先打到谁
 export function enablePicking(stage, board, onPick) {
   const canvas = stage.renderer.domElement
@@ -53,6 +59,7 @@ export function enablePicking(stage, board, onPick) {
     mouse.set(((event.clientX - r.left) / r.width) * 2 - 1, -((event.clientY - r.top) / r.height) * 2 + 1)
     raycaster.setFromCamera(mouse, stage.camera)
     for (const hit of raycaster.intersectObject(board.group, true)) {
+      if (!isShown(hit.object)) continue // 藏起来的配件不算
       let o = hit.object
       while (o && !o.name.startsWith('part:')) o = o.parent // 往上找，直到找到 part:xxx 这一层
       if (o) return o
@@ -68,7 +75,7 @@ export function enablePicking(stage, board, onPick) {
     const c = box.getCenter(new THREE.Vector3())
     frame.geometry.dispose()
     frame.geometry = frameGeometry(size.x, size.z)
-    frame.position.set(c.x, 0.47, c.z)
+    frame.position.set(c.x, box.min.y + 0.01, c.z) // 贴着零件底面（板上的零件在板面，配件在桌面）
     frame.visible = true
   }
 

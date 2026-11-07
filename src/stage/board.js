@@ -5,7 +5,7 @@ import * as THREE from 'three'
 //  单位：1 = 1 cm。x 向右，z 朝向你，y 向上。
 // ============================================================
 
-const Y0 = 0.46 // PCB 上表面离桌面的高度（板子架在 4 根铜柱上）
+export const Y0 = 0.46 // PCB 上表面离桌面的高度（板子架在 4 根铜柱上）
 
 // 每个零件的名字和说明：点击零件、标注气泡都读这里
 export const PARTS = {
@@ -20,13 +20,20 @@ export const PARTS = {
   jlink:   { title: 'J-Link USB', desc: '板载调试器：烧录、调试、串口' },
   jumper:  { title: '电流测量跳线', desc: '拔掉跳线帽、串电流表，实测芯片电流（示意）' },
   headers: { title: '扩展排针', desc: '2×20 双排针，引出 GPIO 接外设' },
+  // —— 第 12 步加的外接配件（平时藏起来，课程需要才显示）——
+  pot:     { title: '电位器模块', desc: '旋钮，把 0–2.0 V 的电压送进 ADC' },
+  imu:     { title: '加速度计 LIS2DH12', desc: 'I2C 接口的三轴加速度计（示意）' },
+  flash:   { title: 'SPI Flash W25Q32', desc: '4 MB 串行 Flash，走 SPI（示意）' },
+  mic:     { title: 'PDM 麦克风模块', desc: '数字麦克风，只要 CLK 和 DATA 两根线' },
+  phone:   { title: '手机', desc: '用 nRF Connect 这类 App 扫描、连接' },
+  battery: { title: 'CR2032 纽扣电池', desc: '3 V，标称约 220 mAh' },
 }
 
 // ---------- 小工具 ----------
-const mat = (color, extra = {}) =>
+export const mat = (color, extra = {}) =>
   new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0, ...extra })
 
-function box(w, h, d, material) {
+export function box(w, h, d, material) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material)
   m.castShadow = true
   m.receiveShadow = true
@@ -34,7 +41,7 @@ function box(w, h, d, material) {
 }
 
 // 把文字画到一张"贴纸"上，平放在零件表面
-function sticker(lines, w, h, { color = '#e9e4d8', px = 0.42 } = {}) {
+export function sticker(lines, w, h, { color = '#e9e4d8', px = 0.42 } = {}) {
   const S = 256 // 每个单位画多少像素，越大越清晰
   const canvas = document.createElement('canvas')
   canvas.width = w * S
@@ -68,7 +75,7 @@ export function partBox(g) {
 }
 
 // 一个"零件" = 一个 Group，名字统一叫 part:xxx，点击时靠它认出是谁
-function part(id, x, z) {
+export function part(id, x, z) {
   const g = new THREE.Group()
   g.name = `part:${id}`
   g.userData = { id, ...PARTS[id] }
@@ -156,6 +163,7 @@ export function createBoard() {
   })
 
   // ---- 2 个按键：底座 + 圆帽 ----
+  const caps = {}
   ;['btn0', 'btn1'].forEach((id, i) => {
     const g = add(part(id, -2.55 + i * 0.85, 1.25))
     const base = box(0.5, 0.18, 0.5, mat(0xd8d2c4))
@@ -165,6 +173,7 @@ export function createBoard() {
     cap.position.y = 0.24
     cap.castShadow = true
     g.add(cap)
+    caps[id] = cap
   })
 
   // ---- J-Link USB 口（板子左边缘） ----
@@ -202,14 +211,24 @@ export function createBoard() {
   hdr.add(plastic)
 
   // ---- 对外提供的"遥控器" ----
+  // on 可以是 true/false，也可以是 0~1 的亮度（第 6 课呼吸灯用）
   function setLed(id, on) {
     const led = leds[id]
     if (!led) return
-    led.m.emissiveIntensity = on ? 2.2 : 0
-    led.glow.material.opacity = on ? 0.9 : 0
-    led.light.intensity = on ? 4 : 0
+    const k = typeof on === 'number' ? Math.max(0, Math.min(1, on)) : on ? 1 : 0
+    led.m.emissiveIntensity = 2.2 * k
+    led.glow.material.opacity = 0.9 * k
+    led.light.intensity = 4 * k
+  }
+
+  // 按键被点时，圆帽往下按一下再弹回来
+  function press(id) {
+    const cap = caps[id]
+    if (!cap) return
+    cap.position.y = 0.19
+    setTimeout(() => { cap.position.y = 0.24 }, 150)
   }
 
   board.traverse((o) => { if (o.isMesh) o.receiveShadow = true })
-  return { group: board, parts, setLed }
+  return { group: board, parts, setLed, press }
 }

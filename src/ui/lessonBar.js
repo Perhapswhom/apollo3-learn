@@ -43,6 +43,9 @@ export function createLessonBar(lessons) {
     setCurrent(id) {
       currentId = id
       render()
+      // 顶部进度条左边的字跟着阶段变：入门 / 外设 / 低功耗 / 蓝牙 / AI 与综合
+      const cur = lessons.find((l) => l.id === id)
+      document.querySelector('.progress-label').textContent = cur?.stage ?? ''
       // 只横向滚动课程条，把当前课挪进视野（不让整页跟着跳）
       const card = list.querySelector('.active')
       if (card) list.scrollLeft += card.getBoundingClientRect().left - list.getBoundingClientRect().left - 12

@@ -20,7 +20,7 @@
         <div class="progress card">
           <span class="progress-label">入门</span>
           <div class="progress-bar"><i id="progress-fill"></i></div>
-          <span id="progress-text">0/3</span>
+          <span id="progress-text">0/20</span>
         </div>
       </header>
 
@@ -48,10 +48,10 @@
           <canvas id="scope-canvas"></canvas>
           <div class="scope-stats">
             <div class="stat"><small>此刻</small><b id="stat-now">—</b></div>
-            <div class="stat"><small>5 秒平均</small><b id="stat-avg">—</b></div>
-            <div class="stat"><small>CR2032 续航</small><b id="stat-life">—</b></div>
+            <div class="stat"><small>运行以来平均</small><b id="stat-avg">—</b></div>
+            <div class="stat"><small id="stat-life-label">CR2032 续航</small><b id="stat-life">—</b></div>
           </div>
-          <p class="scope-note">只算芯片本身：醒着按 6 µA/MHz × 48 MHz ≈ 288 µA，深睡按 1 µA（datasheet 典型值），不含 LED 和外设。</p>
+          <p class="scope-note">按 datasheet 典型值估算：醒着 6 µA/MHz × 48 MHz ≈ 288 µA，深睡 1 µA，BLE 射频收发 3 mA。不含 LED 和外设。</p>
         </section>
       </main>
 
@@ -80,6 +80,7 @@
           <pre id="code-view"></pre>
           <div id="params"></div>
           <div id="serial" class="serial"></div>
+          <input id="serial-input" class="serial-input hidden" placeholder="在这里输入，按回车发给板子" />
         </section>
 
       </aside>

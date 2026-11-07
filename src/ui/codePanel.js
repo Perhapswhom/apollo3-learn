@@ -52,7 +52,7 @@ export function createCodePanel(onParamChange) {
         values[key] = Number(input.value)
         output.textContent = `${values[key]} ${p.unit}`
         render()
-        onParamChange?.(values)
+        onParamChange?.(values, key)
       })
       paramsEl.appendChild(row)
     }
@@ -70,6 +70,7 @@ export function createCodePanel(onParamChange) {
   function highlight(text) {
     const lines = [...view.querySelectorAll('.ln')]
     const idx = text ? lesson.code.split('\n').findIndex((l) => l.includes(text)) : -1
+    if (text && idx === -1) console.warn(`[剧本] 代码里找不到含 "${text}" 的行`)
     lines.forEach((el, i) => el.classList.toggle('hot', i === idx))
     const hot = lines[idx]
     if (hot) {

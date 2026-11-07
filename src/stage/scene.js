@@ -13,7 +13,7 @@ export function createStage(container) {
   container.appendChild(renderer.domElement)
 
   // 3) 正交相机：没有"近大远小"，像工程图纸，看起来就是等轴测风格
-  const VIEW = 7 // 画面竖直方向能看到 7 个单位（1 单位 ≈ 1 cm）
+  let VIEW = 7 // 画面竖直方向能看到 7 个单位（1 单位 ≈ 1 cm）；有配件的课会调大一点
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100)
   camera.position.set(8, 9, 10)   // 从右上前方斜着看
   camera.lookAt(0, 0, 0)
@@ -56,6 +56,12 @@ export function createStage(container) {
   new ResizeObserver(resize).observe(container)
   resize()
 
+  // 换课时调整视野：配件多的课把镜头拉远一点
+  function setView(v) {
+    VIEW = v
+    resize()
+  }
+
   // 7) 渲染循环：每秒约 60 次，先让别的模块更新，再画一帧
   const frameJobs = []
   const onFrame = (fn) => frameJobs.push(fn)
@@ -64,5 +70,5 @@ export function createStage(container) {
     renderer.render(scene, camera)
   })
 
-  return { scene, camera, renderer, onFrame }
+  return { scene, camera, renderer, onFrame, setView }
 }

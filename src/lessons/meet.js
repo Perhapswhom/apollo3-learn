@@ -4,6 +4,7 @@ export default {
   no: 1,
   title: '认识 Apollo3 Blue',
   tag: '入门',
+  stage: '入门',
   lede: '板子中间那颗方形芯片就是主角：Cortex-M4F 内核、BLE 5 射频、1 MB Flash 都在里面。它最大的本事是省电：干完活马上睡，睡着只要约 1 µA。',
   features: [
     '点 3D 板子上的零件，看它是干什么的',

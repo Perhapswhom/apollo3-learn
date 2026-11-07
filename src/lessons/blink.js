@@ -4,6 +4,7 @@ export default {
   no: 2,
   title: '点亮 LED',
   tag: 'GPIO',
+  stage: '入门',
   lede: '把 LED0 所在的 GPIO 设成输出，每隔一段时间翻转一次。注意 am_util_delay_ms 是"原地空转"：等待的时候芯片一直醒着，电一直在用。',
   features: [
     '拖动"闪烁间隔"滑块，代码里的数字跟着变',
