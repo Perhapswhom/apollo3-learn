@@ -38,6 +38,46 @@ int main(void)
     }
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版：LED 用设备树里的别名 led0（apollo3_evb.dts 里定义）
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/gpio.h>
+
+static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+
+int main(void)
+{
+    gpio_pin_configure_dt(&led, GPIO_OUTPUT);
+
+    while (1) {
+        gpio_pin_toggle_dt(&led);
+        k_busy_wait({{period}} * 1000);   // 空转等待（单位 µs）：芯片一直醒着
+    }                                     // 平时用 k_msleep()，那就是第 3 课的睡觉版
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "pinconfig": "gpio_pin_configure_dt",
+    "state_write": "gpio_pin_toggle_dt",
+    "delay_ms": "k_busy_wait",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "Blink an LED",
+    tag: "GPIO",
+    lede: "Set the GPIO under LED0 as an output and toggle it at a fixed interval. Note that am_util_delay_ms is a busy-wait: the chip stays awake the whole time, burning power.",
+    features: [
+      "Drag the \"Blink period\" slider and the number in the code follows",
+      "Run it and watch the scope: the current stays high",
+      "Lesson 3 brings it down with \"sleep + alarm\"",
+    ],
+    pins: [
+      ["LED0", "AM_BSP_GPIO_LED0", "On-board LED, lit by driving the pin high"],
+    ],
+    params: { period: "Blink period" },
+  },
+
   // 剧本：p.period 就是滑块的值
   behavior(ctx, p) {
     let on = false

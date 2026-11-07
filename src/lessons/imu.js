@@ -85,6 +85,58 @@ int main(void)
     }
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版：LIS2DH12 有现成驱动，走 sensor API，不用自己读写寄存器
+// app.overlay（apollo3_evb.dts 里的 I2C 预留在 IOM3：GPIO42 SCL / GPIO43 SDA）：
+//   &i2c3 { status = "okay";
+//     lis2dh12@19 { compatible = "st,lis2dh12", "st,lis2dh"; reg = <0x19>; }; };
+// prj.conf：CONFIG_I2C=y  CONFIG_SENSOR=y  CONFIG_LIS2DH=y
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/sensor.h>
+
+int main(void)
+{
+    const struct device *imu = DEVICE_DT_GET_ONE(st_lis2dh);
+    struct sensor_value acc[3];
+
+    if (!device_is_ready(imu)) return 0;     // 驱动初始化时已经写好 CTRL_REG1（ODR 在 Kconfig 里配）
+
+    while (1) {
+        sensor_sample_fetch(imu);                              // 从 OUT_X_L 起连读 6 字节
+        sensor_channel_get(imu, SENSOR_CHAN_ACCEL_XYZ, acc);   // 已换算成 m/s²
+        printk("x=%6d y=%6d z=%6d mm/s2\\n", (int)sensor_value_to_milli(&acc[0]),
+               (int)sensor_value_to_milli(&acc[1]), (int)sensor_value_to_milli(&acc[2]));
+        k_msleep({{rate}});
+    }
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "imu_write(0x20": "device_is_ready(imu)",
+    "imu_read(0x28": "sensor_sample_fetch",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "Read an accelerometer over I2C",
+    tag: "I2C",
+    lede: "I2C needs just two wires (SCL clock, SDA data), and one bus can hold many devices told apart by address. Apollo3's I2C/SPI hardware is called IOM. This lesson uses IOM1 to read a LIS2DH12 3-axis accelerometer: write a register to turn it on, then read 6 bytes in a row to get X, Y and Z.",
+    features: [
+      "Drag the \"Tilt angle\" slider (live): the 3D module tilts and X and Z trade places",
+      "Lying flat, Z is about 1 g (≈ 250); standing up, X is about 1 g",
+      "Register addresses and values come from the LIS2DH12 datasheet; change them for other sensors",
+    ],
+    pins: [
+      ["IOM1 SCL/SDA", "am_bsp_iom_pins_enable(1, …)", "The BSP sets up IOM1's two I2C wires for you"],
+      ["I2C address", "0x19", "0x19 with the LIS2DH12 SA0 pin high, 0x18 when low"],
+    ],
+    params: { tilt: "Tilt angle", rate: "Read interval" },
+    callouts: [
+      {},
+      { title: "IOM1 (I2C)", text: "SCL, SDA + power and ground" },
+    ],
+  },
+
   // 剧本：按倾斜角度算出 X/Z（1 g ≈ 250），模块在 3D 里跟着倾斜
   behavior(ctx, p) {
     ctx.power('active')

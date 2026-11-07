@@ -1,8 +1,12 @@
 // 动画脚本引擎："运行"按钮背后的东西
 // 它不编译代码，而是照着每节课写好的"剧本"（behavior），按时间点亮 LED、高亮代码、打印串口
 // 第 12 步新增：剧本能响应"点 3D 零件"和"串口输入"，滑块可以不重启就生效
+// 第 16 步新增：连上真板（link）后，串口框只显示板子发来的字，输入框的字发给板子
+// 第 19 步新增：按钮文字走 t()；剧本里可以用 ctx.tr('中文', 'English')
 
-export function createRunner({ stage, board, code, scope, onStart }) {
+import { t, tr } from '../i18n/index.js'
+
+export function createRunner({ stage, board, code, scope, link, onStart }) {
   const btn = document.querySelector('#run-btn')
   const serial = document.querySelector('#serial')
   const input = document.querySelector('#serial-input')
@@ -10,15 +14,22 @@ export function createRunner({ stage, board, code, scope, onStart }) {
   let current = null // 正在跑的剧本：{ timers, cleanup, presses, inputs, p }
   let now = 0
 
-  function print(text) {
+  const live = () => !!link?.connected() // 现在是不是"真板模式"
+
+  // 往串口框里写一行（真板发来的字也走这里）
+  function write(text) {
     serial.textContent += text + '\n'
     if (serial.textContent.length > 6000) serial.textContent = serial.textContent.slice(-4000) // 别无限变长
     serial.scrollTop = serial.scrollHeight
   }
+  // 剧本打印：真板模式下不打印，免得模拟的字和板子的字混在一起
+  function print(text) {
+    if (!live()) write(text)
+  }
 
   // 每一帧检查"闹钟"：到点的就执行
-  stage.onFrame((t) => {
-    now = t
+  stage.onFrame((time) => {
+    now = time
     if (!current) return
     for (const tm of [...current.timers]) {
       if (now - tm.at > 1000) tm.at = now // 页面切到后台再回来，不补跑积压的
@@ -35,7 +46,7 @@ export function createRunner({ stage, board, code, scope, onStart }) {
   function start() {
     if (!lesson?.behavior) return
     stop()
-    serial.textContent = ''
+    if (!live()) serial.textContent = ''
     const timers = []
     const presses = {} // 零件 id → 被点时要做的事
     const inputs = []  // 串口收到一行字时要做的事
@@ -52,11 +63,12 @@ export function createRunner({ stage, board, code, scope, onStart }) {
       onPress: (id, fn) => { presses[id] = fn },                      // 用户点了某个 3D 零件
       onInput: (fn) => inputs.push(fn),                               // 用户在串口输入框里按了回车
       board,                                                          // 配件遥控器：setKnob、setPhone、wave…
+      tr,                                                             // 中英各写一遍：ctx.tr('已连接', 'Connected')
     }
     current = { timers, cleanup: null, presses, inputs, p }
     board.reset?.()
     current.cleanup = lesson.behavior(ctx, p) || null
-    btn.textContent = '■ 停止'
+    btn.textContent = t('run.stop')
     btn.classList.add('running')
     onStart?.(lesson)
   }
@@ -69,7 +81,7 @@ export function createRunner({ stage, board, code, scope, onStart }) {
     board.reset?.()
     code.highlight(null)
     scope?.set(null)
-    btn.textContent = '▶ 运行'
+    btn.textContent = t('run.start')
     btn.classList.remove('running')
   }
 
@@ -80,7 +92,8 @@ export function createRunner({ stage, board, code, scope, onStart }) {
     if (e.key !== 'Enter' || !input.value.trim()) return
     const text = input.value
     input.value = ''
-    if (!current) { print('（先点"运行"，板子才会收）'); return }
+    if (live()) { write(`> ${text}`); link.send(text); return } // 真板模式：直接发给板子
+    if (!current) { print(t('run.needStart')); return }
     print(`> ${text}`)
     current.inputs.forEach((fn) => fn(text))
   })
@@ -89,8 +102,8 @@ export function createRunner({ stage, board, code, scope, onStart }) {
     setLesson(l) {
       stop()
       lesson = l
-      serial.textContent = ''
-      input.classList.toggle('hidden', !l.serialInput) // 这节课要输入才显示输入框
+      if (!live()) serial.textContent = ''
+      input.classList.toggle('hidden', !l.serialInput && !live()) // 这节课要输入、或连着真板，才显示输入框
     },
     restart() { if (current) start() }, // 跑着的时候改了参数，就用新参数重来
     // 滑块变了：标了 live 的参数直接生效（剧本下次读 p.xxx 就是新值），其余的重跑
@@ -105,5 +118,12 @@ export function createRunner({ stage, board, code, scope, onStart }) {
       current?.presses[id]?.()
     },
     stop,
+    write,
+    // 第 16 步：连上 / 断开真板
+    setLive(on, baud) {
+      serial.classList.toggle('live', on)
+      input.classList.toggle('hidden', !on && !lesson?.serialInput)
+      write(on ? t('serial.connected', { baud }) : t('serial.disconnected'))
+    },
   }
 }

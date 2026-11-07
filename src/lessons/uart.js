@@ -71,6 +71,65 @@ int main(void)
     }
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版：用 console 子系统，一次读一整行
+// prj.conf：CONFIG_CONSOLE_SUBSYS=y  CONFIG_CONSOLE_GETLINE=y
+#include <string.h>
+#include <zephyr/kernel.h>
+#include <zephyr/console/console.h>
+#include <zephyr/drivers/gpio.h>
+
+static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+
+// 执行一条命令。直接写电平，高 = 亮，和 HAL 版一致
+// （设备树把 LED 标成 ACTIVE_LOW，用 gpio_pin_set_dt 亮灭会反过来）
+static void run_command(const char *cmd)
+{
+    if (strcmp(cmd, "on") == 0)
+        gpio_pin_set_raw(led.port, led.pin, 1);
+    else if (strcmp(cmd, "off") == 0)
+        gpio_pin_set_raw(led.port, led.pin, 0);
+    else
+        printk("unknown: %s\\n", cmd);
+    printk("ok\\n");
+}
+
+int main(void)
+{
+    gpio_pin_configure_dt(&led, GPIO_OUTPUT);
+    console_getline_init();
+    printk("Type on / off\\n");
+
+    while (1) {
+        char *line = console_getline();   // 等一整行（线程睡着等，CPU 能歇）
+        if (line[0]) run_command(line);
+    }
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "printf_enable": "console_getline_init",
+    "com_uart_transfer": "console_getline()",
+    "OUTPUT_SET": "set_raw(led.port, led.pin, 1)",
+    "OUTPUT_CLEAR": "set_raw(led.port, led.pin, 0)",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "Serial commands",
+    tag: "UART",
+    lede: "The PC sends commands to the board over the J-Link virtual serial port: type on and the LED lights, off and it goes out. The board receives one character at a time and runs a command when Enter arrives. This is the most common \"back door\" for debugging and production test.",
+    features: [
+      "Press \"Run\", type on or off in the box under the serial output, press Enter",
+      "Type anything else and the board replies unknown",
+      "Watch the scope: waiting for characters keeps the CPU awake. A low-power version uses UART interrupts + deep sleep",
+    ],
+    pins: [
+      ["UART TX/RX", "AM_BSP_GPIO_COM_UART_TX / RX", "Becomes a USB serial port on the PC via J-Link"],
+      ["LED0", "AM_BSP_GPIO_LED0", "On-board LED"],
+    ],
+  },
+
   // 剧本：打招呼，然后等用户在输入框里打命令
   behavior(ctx) {
     ctx.power('active')

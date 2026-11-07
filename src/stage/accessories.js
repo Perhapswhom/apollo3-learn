@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { Y0, mat, box, sticker, part } from './board.js'
+import { t } from '../i18n/index.js'
 
 // ============================================================
 //  外接配件：电位器、加速度计、SPI Flash、PDM 麦克风、手机、纽扣电池
@@ -228,7 +229,7 @@ export function addAccessories(board) {
       ringMat.opacity = 0
       ring.scale.setScalar(1)
       for (const w of waves) w.t0 = -1e9
-      setPhone({ title: '手机', lines: ['等待中…'] })
+      setPhone({ title: t('phone.title'), lines: [t('phone.waiting')] })
     },
     update(t) { anims.forEach((fn) => fn(t)) },
   })

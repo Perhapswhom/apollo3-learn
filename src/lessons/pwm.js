@@ -53,6 +53,52 @@ int main(void)
     }
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版：用设备树别名 pwm-led0。apollo3_evb.dts 里它默认关着，接的是 GPIO30（LED1）
+// app.overlay：&timer2 { status = "okay"; };  &pwm2 { status = "okay"; };  &pwmleds { status = "okay"; };
+// prj.conf：CONFIG_PWM=y。PWM 周期用设备树里写的 20 ms，嫌闪就在 overlay 里改小
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/pwm.h>
+
+#define STEPS  64
+
+static const struct pwm_dt_spec led = PWM_DT_SPEC_GET(DT_ALIAS(pwm_led0));
+
+int main(void)
+{
+    while (1) {
+        for (int i = 1; i < STEPS; i++) {          // 慢慢变亮
+            pwm_set_pulse_dt(&led, led.period / STEPS * i);
+            k_msleep({{breath}} / 2 / STEPS);
+        }
+        for (int i = STEPS - 1; i > 0; i--) {      // 再慢慢变暗
+            pwm_set_pulse_dt(&led, led.period / STEPS * i);
+            k_msleep({{breath}} / 2 / STEPS);
+        }
+    }
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "ctimer_start": "PWM_DT_SPEC_GET",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "Breathing LED",
+    tag: "PWM",
+    lede: "An LED is either on or off; \"half bright\" fools the eye by switching very fast. The larger the on-time share of each period, the brighter it looks. That is PWM. Apollo3 switches the pin with CTIMER hardware; the CPU only adjusts the share now and then.",
+    features: [
+      "Drag the \"Breath period\" slider to speed up or slow down the breathing",
+      "The code highlight bounces between the \"brighter\" and \"dimmer\" loops",
+      "On another board, check that the pin can be muxed to a CTIMER output",
+    ],
+    pins: [
+      ["LED0", "AM_BSP_GPIO_LED0", "Used here as the CTIMER0 segment A PWM output (illustrative)"],
+    ],
+    params: { breath: "Breath period" },
+  },
+
   // 剧本：亮度按三角波变化；delay_ms 是空转，CPU 一直醒着
   behavior(ctx, p) {
     ctx.power('active')

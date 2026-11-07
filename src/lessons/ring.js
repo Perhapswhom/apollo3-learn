@@ -55,11 +55,76 @@ int main(void)
     }
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版：内核定时器每秒叫醒一次；读传感器、计步、通知放进工作队列里做（不在中断里干重活）
+// prj.conf：CONFIG_BT=y  CONFIG_BT_PERIPHERAL=y  CONFIG_SENSOR=y  CONFIG_LIS2DH=y  CONFIG_PM=y
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/bluetooth/bluetooth.h>
+
+static uint32_t steps, sec;
+static const struct device *imu = DEVICE_DT_GET_ONE(st_lis2dh);   // 第 9 课的 overlay
+
+uint32_t step_detect(struct sensor_value *acc);   // 简单计步算法（略）
+void notify_steps(uint32_t n);                    // bt_gatt_notify(...)：第 15 课的服务加一个 NOTIFY 特征
+
+// 每 1 秒：读加速度、数步；每 5 秒：通知手机
+static void tick(struct k_work *work)
+{
+    struct sensor_value acc[3];
+
+    sensor_sample_fetch(imu);                             // 第 9 课：读加速度
+    sensor_channel_get(imu, SENSOR_CHAN_ACCEL_XYZ, acc);
+    steps += step_detect(acc);
+    if (++sec % 5 == 0)
+        notify_steps(steps);                              // 第 15 课：BLE 通知手机
+}
+K_WORK_DEFINE(tick_work, tick);
+
+static void on_timer(struct k_timer *t) { k_work_submit(&tick_work); }
+K_TIMER_DEFINE(tick_timer, on_timer, NULL);
+
+int main(void)
+{
+    bt_enable(NULL);                                          // 第 14、15 课
+    k_timer_start(&tick_timer, K_SECONDS(1), K_SECONDS(1));   // 第 3 课的"闹钟"，Zephyr 版
+    k_sleep(K_FOREVER);                                       // 其余时间内核深睡
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "step_detect": "steps += step_detect",
+    "notify_steps": "notify_steps(steps)",
+    "SLEEP_DEEP": "K_FOREVER",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "Smart ring prototype",
+    tag: "Project",
+    lede: "Put it all together: wake every second to read the accelerometer and count steps (lesson 9), send the step count to the phone over BLE every 5 s (lesson 15), deep-sleep the rest of the time (lesson 3). A ring only fits a battery of a few tens of mAh, so this lesson assumes 20 mAh.",
+    batteryName: "20 mAh cell",
+    features: [
+      "Press \"Run\": the accelerometer sways as you walk and the step count on the phone updates every 5 s",
+      "Scope: a small spike each second (sensor read), a radio spike every 5 s (notify), plus a connection event each second",
+      "Average about 6 µA, roughly 4 months on 20 mAh. For longer: notify less often, or batch steps before sending",
+    ],
+    pins: [
+      ["IOM1 (I2C)", "am_bsp_iom_pins_enable(1, …)", "Connects the accelerometer"],
+      ["BLE", "—", "Connected; connection interval assumed to be 1 s"],
+    ],
+  },
+
   // 剧本：每秒读传感器（2 ms），每秒连接碰头（1 ms 射频），每 5 秒通知（3 ms 射频）
   behavior(ctx) {
     let steps = 0
     let sec = 0
-    const draw = () => ctx.board.setPhone({ title: '我的戒指', lines: ['已连接', `今日步数 ${steps}`, `第 ${sec} 秒`], button: `${steps} 步`, on: true })
+    const draw = () => ctx.board.setPhone({
+      title: ctx.tr('我的戒指', 'My ring'),
+      lines: [ctx.tr('已连接', 'Connected'), ctx.tr(`今日步数 ${steps}`, `Steps today ${steps}`), ctx.tr(`第 ${sec} 秒`, `${sec} s`)],
+      button: ctx.tr(`${steps} 步`, `${steps} steps`),
+      on: true,
+    })
     ctx.power('sleep')
     ctx.line('SLEEP_DEEP')
     draw()

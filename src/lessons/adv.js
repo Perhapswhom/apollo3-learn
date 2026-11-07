@@ -46,18 +46,63 @@ void adv_start(void)
     // 接下来什么都不用管：协议栈每秒自己醒来广播一次，其余时间深睡
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版：用 Zephyr 自己的蓝牙协议栈（Host），控制器是 Apollo3 里的 BLE 内核，中间走 HCI
+// prj.conf：CONFIG_BT=y  CONFIG_PM=y
+#include <zephyr/kernel.h>
+#include <zephyr/bluetooth/bluetooth.h>
+
+// 广播内容：标志 + 设备名 "Apollo3-Learn"
+static const struct bt_data ad[] = {
+    BT_DATA_BYTES(BT_DATA_FLAGS, BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR),
+    BT_DATA(BT_DATA_NAME_COMPLETE, "Apollo3-Learn", 13),
+};
+
+int main(void)
+{
+    bt_enable(NULL);                // 打开蓝牙（HCI、控制器初始化都在里面）
+
+    // 广播间隔：单位 0.625 ms，1600 × 0.625 = 1000 ms；第一个参数 0 = 不可连接
+    bt_le_adv_start(BT_LE_ADV_PARAM(0, 1600, 1600, NULL), ad, ARRAY_SIZE(ad), NULL, 0);
+    // 接下来什么都不用管：控制器每秒自己广播一次，其余时间内核深睡
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "{ 1600,": "1600 × 0.625",
+    "AppAdvStart": "bt_le_adv_start",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "BLE advertising",
+    tag: "BLE",
+    lede: "Advertising means shouting every so often: a few dozen bytes such as the device name, sent once on each of the 3 advertising channels. A scanning phone hears it and lists the device. On Apollo3 Blue a dedicated on-chip core runs BLE; the application only sets the advertising data and interval and hands them to the stack.",
+    features: [
+      "Press \"Run\": the antenna sends a ripple each second and Apollo3-Learn appears in the phone list",
+      "A tall spike of about 3 mA on the scope each second: that's the radio transmitting",
+      "Assumes about 3 ms per advertising event (3 channels). The 3 mA radio current is the datasheet value without the MCU; measure the real thing",
+    ],
+    pins: [
+      ["Antenna", "—", "BLE RF comes straight out of the SoC, through the matching network to the ceramic antenna"],
+    ],
+  },
+
   // 剧本：每秒一次 3 ms、3 mA 的射频尖峰，手机列表刷新
   behavior(ctx) {
     ctx.power('sleep')
     ctx.line('AppAdvStart')
-    ctx.board.setPhone({ title: '扫描中…', lines: ['正在搜索附近设备'] })
+    ctx.board.setPhone({ title: ctx.tr('扫描中…', 'Scanning…'), lines: [ctx.tr('正在搜索附近设备', 'Looking for devices')] })
     let n = 0
     ctx.every(1000, () => {
       n++
       ctx.power('radio', 3)
       ctx.board.wave()
       const rssi = -58 - Math.round(Math.random() * 6)
-      ctx.board.setPhone({ title: '扫描结果', lines: ['Apollo3-Learn', `信号 ${rssi} dBm`, `收到广播 ${n} 次`, '', '其他设备…'] })
+      ctx.board.setPhone({
+        title: ctx.tr('扫描结果', 'Scan results'),
+        lines: ['Apollo3-Learn', ctx.tr(`信号 ${rssi} dBm`, `RSSI ${rssi} dBm`), ctx.tr(`收到广播 ${n} 次`, `${n} adverts heard`), '', ctx.tr('其他设备…', 'Other devices…')],
+      })
       ctx.line('{ 1600,')
       ctx.after(400, () => ctx.line('AppAdvStart'))
     })

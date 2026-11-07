@@ -55,5 +55,6 @@ export function createLessonBar(lessons) {
       try { localStorage.setItem(KEY, JSON.stringify([...done])) } catch { /* 存不了也不影响使用 */ }
       render()
     },
+    isDone: (id) => done.has(id), // 第 15 步：目录页要知道哪几课学过
   }
 }

@@ -45,6 +45,54 @@ int main(void)
     }
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版：Zephyr 没有 TurboSPOT 的通用接口，直接调 HAL（hal_ambiq 默认就编译 am_hal_burst.c）
+#include <zephyr/kernel.h>
+#include <am_mcu_apollo.h>
+
+#define USE_TURBO  {{turbo}}        // 1 = 96 MHz TurboSPOT，0 = 48 MHz
+
+void do_work(void);                  // 一段固定的计算，比如一次 FFT（略）
+
+int main(void)
+{
+    am_hal_burst_avail_e avail;
+    am_hal_burst_mode_e  mode;
+
+    am_hal_burst_mode_initialize(&avail);
+
+    while (1) {
+        if (USE_TURBO) am_hal_burst_mode_enable(&mode);    // 切到 96 MHz
+        do_work();                                          // 干活
+        if (USE_TURBO) am_hal_burst_mode_disable(&mode);   // 回到 48 MHz
+        k_sleep(K_SECONDS(1));                              // 睡到下一秒
+    }
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "SLEEP_DEEP": "K_SECONDS(1)",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "48 or 96 MHz",
+    tag: "TurboSPOT",
+    lede: "Apollo3 Blue normally runs at 48 MHz and can switch on TurboSPOT to reach 96 MHz when needed. Intuition says \"faster = more power\", but in µA/MHz terms doubling the clock doubles the current and halves the work time, so the same job costs about the same charge. The win: the work finishes twice as fast and the chip goes back to sleep sooner.",
+    features: [
+      "Flip the TurboSPOT slider between 0 and 1 and compare the scope",
+      "Assume 4.8 million cycles of work each second: 100 ms at 48 MHz, only 50 ms at 96 MHz",
+      "This is a linear 6 µA/MHz estimate, so both averages come out nearly equal. For real silicon, measure it",
+    ],
+    pins: [
+      ["LED1", "AM_BSP_GPIO_LED1", "The script uses it to show \"computing\""],
+    ],
+    params: { turbo: "TurboSPOT" },
+    callouts: [
+      { title: "TurboSPOT", text: "48 MHz ↔ 96 MHz, switch on demand" },
+    ],
+  },
+
   // 剧本：每秒干一次活；48 MHz 干 100 ms，96 MHz 干 50 ms
   behavior(ctx, p) {
     const turbo = p.turbo === 1

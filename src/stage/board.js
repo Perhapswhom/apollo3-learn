@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { t, isEn } from '../i18n/index.js'
 
 // ============================================================
 //  用"积木"拼一块 Apollo3 Blue 评估板（示意模型，不是真实布局）
@@ -27,6 +28,27 @@ export const PARTS = {
   mic:     { title: 'PDM 麦克风模块', desc: '数字麦克风，只要 CLK 和 DATA 两根线' },
   phone:   { title: '手机', desc: '用 nRF Connect 这类 App 扫描、连接' },
   battery: { title: 'CR2032 纽扣电池', desc: '3 V，标称约 220 mAh' },
+}
+
+// 第 19 步：零件说明的英文版（英文模式下用这里的）
+export const PARTS_EN = {
+  soc:     { title: 'Apollo3 Blue SoC', desc: 'Cortex-M4F · 48/96 MHz · 1 MB flash · 384 KB SRAM · BLE 5' },
+  antenna: { title: 'BLE antenna', desc: '2.4 GHz ceramic antenna, no copper underneath' },
+  xtal:    { title: '32.768 kHz crystal', desc: 'Low-power clock that RTC and STIMER count on' },
+  led0:    { title: 'LED0', desc: 'On-board LED, AM_BSP_GPIO_LED0' },
+  led1:    { title: 'LED1', desc: 'On-board LED, AM_BSP_GPIO_LED1' },
+  led2:    { title: 'LED2', desc: 'On-board LED, AM_BSP_GPIO_LED2' },
+  btn0:    { title: 'Button BTN0', desc: 'Pressed = low; can wake the chip' },
+  btn1:    { title: 'Button BTN1', desc: 'Second user button' },
+  jlink:   { title: 'J-Link USB', desc: 'On-board debugger: flash, debug, serial' },
+  jumper:  { title: 'Current jumper', desc: 'Remove the jumper, put an ammeter in series to measure the chip (illustrative)' },
+  headers: { title: 'Expansion headers', desc: '2×20 headers bring GPIOs out to peripherals' },
+  pot:     { title: 'Potentiometer module', desc: 'A knob that feeds 0–2.0 V into the ADC' },
+  imu:     { title: 'Accelerometer LIS2DH12', desc: '3-axis accelerometer on I2C (illustrative)' },
+  flash:   { title: 'SPI flash W25Q32', desc: '4 MB serial flash on SPI (illustrative)' },
+  mic:     { title: 'PDM mic module', desc: 'Digital mic: just CLK and DATA' },
+  phone:   { title: 'Phone', desc: 'Scan and connect with an app such as nRF Connect' },
+  battery: { title: 'CR2032 coin cell', desc: '3 V, about 220 mAh nominal' },
 }
 
 // ---------- 小工具 ----------
@@ -78,7 +100,7 @@ export function partBox(g) {
 export function part(id, x, z) {
   const g = new THREE.Group()
   g.name = `part:${id}`
-  g.userData = { id, ...PARTS[id] }
+  g.userData = { id, ...PARTS[id], ...(isEn ? PARTS_EN[id] : {}) }
   g.position.set(x, Y0, z)
   return g
 }
@@ -113,7 +135,7 @@ export function createBoard() {
     post.castShadow = true
     board.add(post)
   }
-  const silk = sticker(['Apollo3 Blue EVB', '示意模型'], 1.9, 0.62, { color: '#9fb0c4', px: 0.18 })
+  const silk = sticker(['Apollo3 Blue EVB', t('board.silk')], 1.9, 0.62, { color: '#9fb0c4', px: 0.18 })
   silk.position.set(0.45, Y0 + 0.002, 1.3)
   board.add(silk)
 

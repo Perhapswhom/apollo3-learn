@@ -69,6 +69,65 @@ int main(void)
     }
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版：Zephyr 主线还没有 Apollo3 片上温度传感器的驱动，这里直接调 Ambiq HAL
+// adc0 在设备树里保持关闭（不然 Zephyr 的 ADC 驱动会先占住它），HAL 的 ADC 文件自己加进编译：
+// CMakeLists.txt：target_sources(app PRIVATE \${ZEPHYR_HAL_AMBIQ_MODULE_DIR}/mcu/apollo3/hal/am_hal_adc.c)
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/gpio.h>
+#include <am_mcu_apollo.h>
+
+static const struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(DT_ALIAS(led2), gpios);
+void *g_adc;                      // adc_init_temp() 里初始化
+void adc_init_temp(void);         // 和 HAL 版完全一样（am_hal_adc_* 那一段）
+float temp_from_volts(float v);   // 电压 → 摄氏度（含出厂校准，见 SDK 的 adc_vbatt 例程）
+
+int main(void)
+{
+    uint32_t n = 1;
+    am_hal_adc_sample_t s;
+
+    gpio_pin_configure_dt(&led2, GPIO_OUTPUT);
+    adc_init_temp();
+
+    while (1) {
+        am_hal_adc_sw_trigger(g_adc);
+        k_msleep(1);
+        am_hal_adc_samples_read(g_adc, false, NULL, &n, &s);
+
+        float c = temp_from_volts(s.ui32Sample * 2.0f / 16383);
+        printk("Temp = %d.%d C\\n", (int)c, (int)(c * 10) % 10);  // printk 不带浮点，拆成整数打印
+        gpio_pin_set_raw(led2.port, led2.pin, c > {{alarm}});    // 超过报警温度：LED2 亮
+        k_msleep(1000);
+    }
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "Temp = %.1f C": "Temp = %d.%d C",
+    "state_write(AM_BSP_GPIO_LED2": "set_raw(led2.port",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "On-chip temperature",
+    tag: "Sensor",
+    lede: "The SoC has a built-in temperature sensor, no extra parts needed: switch the ADC channel to TEMP and measure. The product brief quotes about ±3 °C after calibration: good enough for \"too hot, slow down or alarm\" protection, not for a precision thermometer.",
+    features: [
+      "Drag the \"Ambient temperature\" slider (live) and the serial reading follows",
+      "Above the \"Alarm temperature\", the red LED2 lights",
+      "Converting volts to °C needs the chip's factory trim; follow the SDK adc_vbatt example",
+    ],
+    pins: [
+      ["TEMP", "AM_HAL_ADC_SLOT_CHSEL_TEMP", "Internal ADC channel wired to the on-chip temperature sensor"],
+      ["LED2", "AM_BSP_GPIO_LED2", "Over-temperature alarm LED"],
+    ],
+    params: { room: "Ambient temperature", alarm: "Alarm temperature" },
+    callouts: [
+      { title: "On-chip temperature sensor", text: "Inside the SoC, about ±3 °C after calibration" },
+    ],
+  },
+
   // 剧本：每秒按"环境温度"出一个读数（芯片比环境略热一点，再加 ±0.3 °C 的抖动）
   behavior(ctx, p) {
     ctx.power('active')

@@ -46,6 +46,45 @@ int main(void)
     }
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版：骨架一样，"睡"交给内核
+// prj.conf：CONFIG_PM=y
+#include <zephyr/kernel.h>
+
+#define PERIOD_MS  {{period}}       // 多久醒一次
+#define AWAKE_MS   {{awake}}        // 每次醒多久
+
+void do_work(uint32_t ms);          // 醒来要干的活（读传感器、算一算、发数据）
+
+int main(void)
+{
+    while (1) {
+        k_msleep(PERIOD_MS);         // 睡（内核空闲 → 深睡）
+        do_work(AWAKE_MS);           // 醒来干活
+    }
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "SLEEP_DEEP": "k_msleep(PERIOD_MS)",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "How long will the battery last",
+    tag: "Battery life",
+    lede: "Nearly every battery device has the same structure: wake briefly, do some work, sleep for a long time. Battery life depends on just two numbers: how long each wake lasts and how often it happens. Average current ≈ 1 µA + 288 µA × awake time ÷ period; battery life = capacity ÷ average current.",
+    features: [
+      "Drag the two sliders and watch \"average\" and \"life\" on the right of the scope",
+      "Awake 5 ms once a second: about 2.4 µA average, over 10 years on a 220 mAh coin cell (in practice limited by self-discharge)",
+      "Awake 100 ms every 100 ms (always awake): 288 µA, flat in about a month",
+    ],
+    pins: [
+      ["CR2032", "—", "3 V coin cell, about 220 mAh nominal"],
+    ],
+    params: { period: "Wake every", awake: "Awake for" },
+  },
+
   // 剧本：按两个滑块的值，睡 / 醒交替
   behavior(ctx, p) {
     ctx.power('sleep')

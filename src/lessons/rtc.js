@@ -57,6 +57,52 @@ int main(void)
     }
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版：RTC 有通用 API；"每秒醒一次"交给内核定时器最省事
+// app.overlay：&rtc0 { status = "okay"; };   prj.conf：CONFIG_RTC=y  CONFIG_PM=y
+// 想严格对齐整秒：用 rtc_alarm_set_time + rtc_alarm_set_callback（CONFIG_RTC_ALARM=y）
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/rtc.h>
+
+static const struct device *rtc = DEVICE_DT_GET(DT_NODELABEL(rtc0));
+
+int main(void)
+{
+    struct rtc_time t = { .tm_year = 126, .tm_mon = 10, .tm_mday = 7,   // 先对个时：2026-11-07
+                          .tm_hour = 9, .tm_min = 30, .tm_sec = 0 };   // （年从 1900 起，月从 0 起）
+    rtc_set_time(rtc, &t);
+
+    while (1) {
+        k_sleep(K_SECONDS(1));                    // 睡 1 秒（内核用 STIMER 叫醒）
+        rtc_get_time(rtc, &t);
+        printk("%02d:%02d:%02d\\n", t.tm_hour, t.tm_min, t.tm_sec);
+    }
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "am_hal_rtc_time_get": "rtc_get_time",
+    "SLEEP_DEEP": "K_SECONDS(1)",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "RTC clock",
+    tag: "Low power",
+    lede: "The RTC is the chip's wristwatch: it keeps time from the 32.768 kHz crystal and never stops, even in deep sleep. Set the time, then an alarm that repeats every second, and the chip can wake each second, glance at the time, print a line and go straight back to sleep. Watches and data loggers all work this way.",
+    features: [
+      "Press \"Run\": the time prints every second and the scope shows a spike each second",
+      "The script assumes each print wake takes 2 ms (sending 9 characters takes about 1 ms)",
+      "Average about 1.6 µA: a bit more than lesson 3 because each wake is longer",
+    ],
+    pins: [
+      ["32.768 kHz", "AM_HAL_RTC_OSC_XT", "The RTC uses the external crystal, far more accurate than the internal RC oscillator"],
+    ],
+    callouts: [
+      { title: "The RTC's \"heartbeat\"", text: "32.768 kHz crystal, keeps ticking in deep sleep" },
+    ],
+  },
+
   // 剧本：从 09:30:00 开始，每秒醒 2 ms 打印一次
   behavior(ctx) {
     let sec = 9 * 3600 + 30 * 60

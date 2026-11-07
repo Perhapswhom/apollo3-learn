@@ -76,6 +76,58 @@ int main(void)
     }
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版：ADC 通道写在设备树 overlay 里，代码只管"量"
+// app.overlay：
+//   / { zephyr,user { io-channels = <&adc0 0>; }; };
+//   &adc0 { status = "okay"; #address-cells = <1>; #size-cells = <0>;
+//     channel@0 { reg = <0>; zephyr,gain = "ADC_GAIN_1"; zephyr,reference = "ADC_REF_INTERNAL";
+//       zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>; zephyr,resolution = <14>; }; };
+// prj.conf：CONFIG_ADC=y
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/adc.h>
+
+static const struct adc_dt_spec ch = ADC_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), 0);
+
+int main(void)
+{
+    int16_t raw;
+    struct adc_sequence seq = { .buffer = &raw, .buffer_size = sizeof(raw) };
+
+    adc_channel_setup_dt(&ch);                 // 单端 SE0、14 位：参数都来自设备树
+    adc_sequence_init_dt(&ch, &seq);
+
+    while (1) {
+        adc_read_dt(&ch, &seq);                 // 量一次，结果放进 raw
+        int32_t mv = raw;
+        adc_raw_to_millivolts_dt(&ch, &mv);     // 按设备树里的参考电压换算成 mV
+        printk("ADC=%5d  %4d mV\\n", raw, mv);
+        k_msleep(200);
+    }
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "adc_init();": "adc_channel_setup_dt",
+    "samples_read": "adc_read_dt",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "Read a potentiometer",
+    tag: "ADC",
+    lede: "The ADC turns a voltage into a number. Apollo3 Blue's ADC is 14-bit: 0 V reads 0 and the reference voltage reads 16383. A potentiometer is a voltage divider you can twist: wherever you turn it, that's the voltage coming in.",
+    features: [
+      "Press \"Run\" and drag the \"Knob position\" slider: the 3D knob turns and the serial reading follows",
+      "This slider is live: dragging it does not restart the script",
+      "Internal 2.0 V reference: wire the pot between GND and 2.0 V; anything higher can't be read",
+    ],
+    pins: [
+      ["ADC SE0", "AM_HAL_ADC_SLOT_CHSEL_SE0", "Single-ended channel 0; mux the pin to analog input first (see the SDK adc example)"],
+    ],
+    params: { pos: "Knob position" },
+  },
+
   // 剧本：每 200 ms 按旋钮位置算一个读数（加一点点噪声，像真的一样）
   behavior(ctx, p) {
     ctx.power('active')

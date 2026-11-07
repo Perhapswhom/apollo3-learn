@@ -14,22 +14,27 @@
           <div class="brand-mark">A3</div>
           <div>
             <div class="brand-name">LEARN <b>APOLLO3 BLUE</b></div>
-            <div class="brand-sub">低功耗 · 蓝牙 · 边缘 AI</div>
+            <div class="brand-sub" data-i18n="brand.sub">低功耗 · 蓝牙 · 边缘 AI</div>
           </div>
         </div>
-        <div class="progress card">
-          <span class="progress-label">入门</span>
-          <div class="progress-bar"><i id="progress-fill"></i></div>
-          <span id="progress-text">0/20</span>
+        <div class="top-right">
+          <!-- 第 19 步：中英切换（显示的是"切过去"的那种语言） -->
+          <button id="lang-btn" class="lang-btn card" data-i18n-title="lang.title">EN</button>
+          <!-- 点进度条也能打开课程目录（手机上没有左侧导航，就靠它） -->
+          <a class="progress card" href="#catalog" data-i18n-title="progress.title">
+            <span class="progress-label">入门</span>
+            <div class="progress-bar"><i id="progress-fill"></i></div>
+            <span id="progress-text">0/20</span>
+          </a>
         </div>
       </header>
 
-      <!-- ② 左侧导航（第一版只做样子） -->
+      <!-- ② 左侧导航：首页 = 当前这节课，课程 = 目录页（元件、参考还没做） -->
       <nav class="sidenav">
-        <button class="nav-item active">首页</button>
-        <button class="nav-item">课程</button>
-        <button class="nav-item">元件</button>
-        <button class="nav-item">参考</button>
+        <button class="nav-item active" data-nav="home" data-i18n="nav.home">首页</button>
+        <button class="nav-item" data-nav="catalog" data-i18n="nav.catalog">课程</button>
+        <button class="nav-item soon" disabled data-i18n="nav.parts" data-i18n-title="nav.soon">元件</button>
+        <button class="nav-item soon" disabled data-i18n="nav.ref" data-i18n-title="nav.soon">参考</button>
       </nav>
 
       <!-- ③ 中间 3D 舞台：画布 + 标注线 + 标注气泡 + 电流示波器 -->
@@ -37,21 +42,25 @@
         <div id="stage"></div>
         <svg id="callout-lines"></svg>
         <div id="callouts"></div>
-        <div class="stage-hint">拖动旋转 · 滚轮缩放 · 点击零件</div>
+        <div class="stage-hint" data-i18n="stage.hint">拖动旋转 · 滚轮缩放 · 点击零件</div>
 
         <!-- 电流示波器：浮在舞台左下角，运行时一直看得到 -->
         <section class="scope card">
           <div class="card-head">
-            <h3>电流示波器</h3>
-            <span class="muted">SoC 电流估算</span>
+            <h3 data-i18n="scope.title">电流示波器</h3>
+            <span id="scope-mode" class="muted" data-i18n="scope.mode.est">SoC 电流估算</span>
+            <!-- 第 17 步：导入 PPK2 / Joulescope 的实测 CSV（也可以直接把文件拖到这张卡片上） -->
+            <button id="scope-import" class="link-btn" data-i18n="scope.import" data-i18n-title="scope.import.title">导入实测</button>
+            <input id="scope-file" type="file" accept=".csv,text/csv,text/plain" hidden />
           </div>
           <canvas id="scope-canvas"></canvas>
           <div class="scope-stats">
-            <div class="stat"><small>此刻</small><b id="stat-now">—</b></div>
-            <div class="stat"><small>运行以来平均</small><b id="stat-avg">—</b></div>
+            <div class="stat"><small data-i18n="stat.now">此刻</small><b id="stat-now">—</b></div>
+            <div class="stat"><small id="stat-avg-label" data-i18n="stat.avg">运行以来平均</small><b id="stat-avg">—</b></div>
             <div class="stat"><small id="stat-life-label">CR2032 续航</small><b id="stat-life">—</b></div>
           </div>
-          <p class="scope-note">按 datasheet 典型值估算：醒着 6 µA/MHz × 48 MHz ≈ 288 µA，深睡 1 µA，BLE 射频收发 3 mA。不含 LED 和外设。</p>
+          <p class="scope-note" data-i18n="scope.note">按 datasheet 典型值估算：醒着 6 µA/MHz × 48 MHz ≈ 288 µA，深睡 1 µA，BLE 射频收发 3 mA。不含 LED 和外设。</p>
+          <a id="scope-sample" class="scope-sample" href="samples/synthetic-ble-adv.csv" data-i18n="scope.sample">没有仪器？用合成示例试试导入</a>
         </section>
       </main>
 
@@ -59,8 +68,8 @@
       <aside class="panel">
         <section class="card info">
           <div class="tabs">
-            <button class="tab active" data-tab="overview">概览</button>
-            <button class="tab" data-tab="pins">引脚</button>
+            <button class="tab active" data-tab="overview" data-i18n="tab.overview">概览</button>
+            <button class="tab" data-tab="pins" data-i18n="tab.pins">引脚</button>
           </div>
           <div id="tab-overview" class="tab-body">
             <h2 id="lesson-title">课程标题</h2>
@@ -74,20 +83,53 @@
 
         <section class="card code">
           <div class="card-head">
-            <h3>动手试试</h3>
-            <button id="run-btn" class="run-btn">▶ 运行</button>
+            <h3 data-i18n="code.title">动手试试</h3>
+            <button id="run-btn" class="run-btn" data-i18n="run.start">▶ 运行</button>
+          </div>
+          <!-- 第 18 步：同一节课的两种写法 -->
+          <div class="code-tabs">
+            <button class="code-tab active" data-sdk="hal">AmbiqSuite HAL</button>
+            <button class="code-tab" data-sdk="zephyr">Zephyr</button>
           </div>
           <pre id="code-view"></pre>
           <div id="params"></div>
-          <div id="serial" class="serial"></div>
-          <input id="serial-input" class="serial-input hidden" placeholder="在这里输入，按回车发给板子" />
+          <!-- 第 16 步：串口工具条。默认"模拟"；点"连真板"用 Web Serial 连 EVB -->
+          <div class="serial-bar">
+            <span class="serial-title" data-i18n="serial.title">串口</span>
+            <span id="serial-status" class="serial-status" data-i18n="serial.sim">模拟</span>
+            <select id="serial-baud" data-i18n-title="serial.baudTitle">
+              <option>115200</option>
+              <option>9600</option>
+              <option>460800</option>
+              <option>921600</option>
+            </select>
+            <button id="serial-connect" class="link-btn" data-i18n="serial.connect">连真板</button>
+          </div>
+          <div id="serial" class="serial" data-i18n-empty="serial.empty" data-empty="串口输出会显示在这里"></div>
+          <input id="serial-input" class="serial-input hidden" data-i18n-placeholder="serial.placeholder" placeholder="在这里输入，按回车发给板子" />
         </section>
 
       </aside>
 
+      <!-- ⑥ 课程目录页：盖在舞台、右侧面板、课程条上面，平时藏起来
+           （id 故意不叫 catalog：网址 #catalog 如果和元素 id 同名，浏览器会自己滚过去） -->
+      <section id="catalog-page" class="catalog card hidden">
+        <div class="catalog-head">
+          <div>
+            <h2 data-i18n="catalog.title">全部课程</h2>
+            <span id="catalog-count" class="muted"></span>
+          </div>
+          <div class="catalog-actions">
+            <a id="catalog-continue" class="continue-btn" href="#"></a>
+            <button id="catalog-close" class="close-btn" data-i18n-title="catalog.close">✕</button>
+          </div>
+        </div>
+        <div class="catalog-body"></div>
+      </section>
+
       <!-- ⑤ 底部课程条 -->
       <footer class="lessonbar">
-        <span class="lessonbar-title">课程</span>
+        <span class="lessonbar-title" data-i18n="lessonbar.title">课程</span>
         <div id="lesson-list"></div>
       </footer>
     </div>

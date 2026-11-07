@@ -64,6 +64,12 @@ button { font: inherit; color: inherit; }
   width: clamp(320px, 32vw, 440px); height: 100%;
   display: flex; align-items: center; gap: 12px; padding: 0 16px;
 }
+/* 第 19 步：右上角 = 语言按钮 + 进度条 */
+.top-right { display: flex; align-items: stretch; gap: 8px; height: 100%; }
+.lang-btn { padding: 0 14px; cursor: pointer; font: 600 13px var(--mono); color: var(--ink-2); white-space: nowrap; }
+.lang-btn:hover { color: var(--accent); border-color: var(--accent); }
+a.progress { text-decoration: none; color: inherit; }
+a.progress:hover { border-color: var(--accent); }
 .progress-label { white-space: nowrap; }
 .progress-bar { flex: 1; height: 8px; background: var(--paper-2); border-radius: 99px; overflow: hidden; }
 #progress-fill { display: block; height: 100%; width: 0; background: var(--accent); transition: width .4s; }
@@ -76,6 +82,8 @@ button { font: inherit; color: inherit; }
   background: transparent; color: var(--ink-2); cursor: pointer; font-size: 13px;
 }
 .nav-item.active { background: var(--card); border-color: var(--line); color: var(--accent); font-weight: 600; }
+.nav-item:not(.active):not(:disabled):hover { color: var(--ink); }
+.nav-item.soon { opacity: .45; cursor: default; }
 
 /* ============ 5. 3D 舞台 ============ */
 .stage { position: relative; overflow: hidden; background: #fbf6ec; }
@@ -124,6 +132,15 @@ button { font: inherit; color: inherit; }
   padding: 6px 14px; font-weight: 600; font-size: 13px; cursor: pointer;
 }
 .run-btn.running { background: #c2410c; }
+/* 第 18 步：HAL / Zephyr 标签页，贴在代码框上沿 */
+.code-tabs { display: flex; gap: 4px; margin-bottom: -9px; padding-left: 8px; }
+.code-tab {
+  border: 1px solid var(--line); border-bottom: 0; border-radius: 8px 8px 0 0;
+  background: var(--paper); color: var(--ink-2); font: 600 11px var(--mono);
+  padding: 4px 10px; cursor: pointer;
+}
+.code-tab.active { background: #fbf7ef; color: var(--accent); position: relative; z-index: 1; }
+.code-tab:disabled { opacity: .45; cursor: not-allowed; }
 #code-view {
   margin: 0; background: #fbf7ef; border: 1px solid var(--line); border-radius: 10px;
   padding: 8px 0; font: 12px/1.65 var(--mono); overflow: auto; max-height: 228px;
@@ -149,7 +166,21 @@ button { font: inherit; color: inherit; }
   background: #1f2a37; color: #c8f7e8; font: 12px/1.5 var(--mono);
   border-radius: 10px; padding: 8px 10px; height: 76px; overflow: auto; white-space: pre-wrap;
 }
-.serial:empty::before { content: "串口输出会显示在这里"; color: #6b7a8c; }
+.serial:empty::before { content: attr(data-empty); color: #6b7a8c; } /* 第 19 步：提示字从 data-empty 取，好翻译 */
+.serial.live { background: #10261f; color: #e6fff6; box-shadow: inset 0 0 0 1px #0e9384; }
+
+/* 第 16 步：串口工具条 */
+.serial-bar { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: -2px; }
+.serial-title { font-weight: 600; font-size: 13px; }
+.serial-status { padding: 1px 8px; border-radius: 99px; background: var(--paper-2); color: var(--ink-2); font: 600 11px var(--mono); }
+.serial-status.live { background: var(--accent); color: #fff; }
+#serial-baud { margin-left: auto; font: 12px var(--mono); border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 2px 4px; }
+.link-btn {
+  white-space: nowrap;
+  border: 1px solid var(--accent); color: var(--accent); background: #fff;
+  border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.link-btn:disabled { border-color: var(--line); color: var(--ink-2); cursor: not-allowed; }
 .serial-input {
   font: 12px var(--mono); border: 1px solid var(--line); border-radius: 8px;
   padding: 6px 10px; background: #fff; color: var(--ink); outline-color: var(--accent);
@@ -166,6 +197,17 @@ button { font: inherit; color: inherit; }
 .stat small { display: block; color: var(--ink-2); font-size: 11px; }
 .stat b { font: 600 13px var(--mono); }
 .scope-note { font-size: 10.5px; color: var(--ink-2); margin: 6px 0 0; line-height: 1.45; }
+
+/* 第 17 步：导入实测 */
+.scope .card-head { gap: 8px; }
+.scope .card-head h3 { margin-right: auto; white-space: nowrap; }
+#scope-mode { white-space: nowrap; }
+.scope.drop { box-shadow: 0 0 0 3px var(--accent); }
+.scope.replay { box-shadow: 0 0 0 2px #c2410c55, 0 8px 24px rgba(31, 42, 55, .08); }
+.scope.replay #scope-mode { color: #c2410c; font-weight: 600; }
+.scope-note.error { color: #b91c1c; }
+.scope-sample { display: inline-block; font-size: 10.5px; color: var(--accent); margin-top: 2px; }
+.scope.replay .scope-sample { display: none; }
 
 /* ============ 7. 底部课程条 ============ */
 .lessonbar { display: flex; align-items: center; gap: 12px; min-width: 0; }
@@ -186,11 +228,47 @@ button { font: inherit; color: inherit; }
 .lesson-name { font-weight: 600; font-size: 14px; }
 .lesson-tag { font-size: 12px; color: var(--ink-2); }
 
+/* ============ 9. 课程目录页（第 15 步）：盖住舞台 + 右侧面板 + 课程条 ============ */
+.catalog {
+  grid-row: 2 / 4; grid-column: 2 / 4; z-index: 5;
+  overflow: auto; padding: 20px 24px 28px;
+}
+.catalog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.catalog-head h2 { margin: 0 0 2px; font-size: 22px; }
+.catalog-actions { display: flex; align-items: center; gap: 8px; }
+.continue-btn {
+  background: var(--accent); color: #fff; text-decoration: none; border-radius: 8px;
+  padding: 7px 14px; font-weight: 600; font-size: 13px;
+}
+.close-btn {
+  width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--card); cursor: pointer; color: var(--ink-2);
+}
+.cat-group { margin-top: 20px; }
+.cat-group-head { display: flex; align-items: center; gap: 10px; }
+.cat-group-head h3 { margin: 0; font-size: 16px; }
+.cat-count { font: 600 12px var(--mono); color: var(--ink-2); }
+.cat-bar { width: 80px; height: 6px; border-radius: 99px; background: var(--paper-2); overflow: hidden; }
+.cat-bar i { display: block; height: 100%; background: var(--accent); }
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin-top: 10px; }
+.cat-card {
+  display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px;
+  text-decoration: none; color: inherit;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+}
+.cat-card:hover { border-color: var(--accent); }
+.cat-card.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.cat-card.done .lesson-no { background: var(--accent); color: #fff; }
+.cat-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cat-lede { font-size: 12px; color: var(--ink-2); line-height: 1.5; margin-top: 4px; }
+
 /* 屏幕矮（比如 13 寸笔记本）：示波器缩小一点 */
 @media (max-height: 800px) {
   .scope { width: 260px; }
   #scope-canvas { height: 60px; }
   .scope-note { display: none; }
+  .scope.replay .scope-note { display: block; } /* 回放时说明里有文件名和峰值，留着 */
+  #scope-mode { display: none; }                /* 卡片窄，模式靠橙色边框和说明文字看 */
 }
 
 /* ============ 8. 窄屏（手机/小窗口）：改成上下排 ============ */
@@ -205,6 +283,8 @@ button { font: inherit; color: inherit; }
   .brand-mark { width: 36px; height: 36px; font-size: 14px; }
   .brand-name { font-size: 16px; }
   .progress { width: auto; flex: 0 1 160px; height: 44px; }
+  .top-right { height: 44px; }
+  .lang-btn { padding: 0 10px; }
   .panel { overflow: visible; }
   .callout span { display: none; }  /* 手机上标注只留标题 */
   /* 示波器挪到舞台正下方（不再盖住板子） */
@@ -212,4 +292,7 @@ button { font: inherit; color: inherit; }
   .scope { top: calc(100% + 12px); bottom: auto; left: 0; right: 0; width: auto; }
   #scope-canvas { height: 56px; }
   .scope-note { display: none; }
+  /* 目录页盖住舞台以下的所有内容 */
+  .catalog { grid-row: 2 / 5; grid-column: 1; padding: 16px; }
+  .cat-grid { grid-template-columns: 1fr; }
 }

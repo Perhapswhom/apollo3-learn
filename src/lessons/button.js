@@ -49,6 +49,55 @@ int main(void)
     }
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版：按键用设备树别名 sw0（BTN0）
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/gpio.h>
+
+static const struct gpio_dt_spec btn = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);
+static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+static struct gpio_callback btn_cb;
+
+// 按键中断：BTN0 一按就进这里（中断标志 Zephyr 已经替你清了）
+static void on_press(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+{
+    gpio_pin_toggle_dt(&led);
+}
+
+int main(void)
+{
+    gpio_pin_configure_dt(&led, GPIO_OUTPUT);
+    gpio_pin_configure_dt(&btn, GPIO_INPUT);
+    gpio_pin_interrupt_configure_dt(&btn, GPIO_INT_EDGE_TO_ACTIVE);
+    gpio_init_callback(&btn_cb, on_press, BIT(btn.pin));
+    gpio_add_callback(btn.port, &btn_cb);
+
+    k_sleep(K_FOREVER);             // 睡到有人按键
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "am_gpio_isr": "static void on_press",
+    "OUTPUT_TOGGLE": "gpio_pin_toggle_dt",
+    "SLEEP_DEEP": "K_FOREVER",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "Wake on button",
+    tag: "GPIO interrupt",
+    lede: "The chip deep-sleeps until someone presses BTN0. The button sits on a GPIO set up as an interrupt: when the level changes, hardware wakes the chip, the interrupt handler toggles the LED, and it goes back to sleep. The CPU is awake for only a blink.",
+    features: [
+      "Press \"Run\", then click the BTN0 button on the 3D board",
+      "Each press makes a spike on the scope and toggles LED0",
+      "Between presses the current hugs 1 µA: this is the power-saving \"event-driven\" style",
+    ],
+    pins: [
+      ["BTN0", "AM_BSP_GPIO_BUTTON0", "On-board button, using the BSP preset input + interrupt config"],
+      ["LED0", "AM_BSP_GPIO_LED0", "On-board LED"],
+    ],
+  },
+
   // 剧本：一直睡；用户点 BTN0 就醒 1 ms、翻转 LED
   behavior(ctx) {
     let on = false

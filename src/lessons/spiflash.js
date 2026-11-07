@@ -63,6 +63,57 @@ int main(void)
     }
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版：SPI Flash 用通用的 spi-nor 驱动，读 JEDEC ID 有现成函数
+// app.overlay（apollo3_evb.dts 里 SPI 预留在 IOM0，片选是 GPIO11）：
+//   &spi0 { status = "okay";
+//     w25q32: flash@0 { compatible = "jedec,spi-nor"; reg = <0>; spi-max-frequency = <8000000>;
+//       jedec-id = [ef 40 16]; size = <DT_SIZE_M(32)>; }; };      // size 的单位是 bit
+// prj.conf：CONFIG_SPI=y  CONFIG_FLASH=y  CONFIG_SPI_NOR=y  CONFIG_FLASH_JESD216_API=y  CONFIG_PM_DEVICE=y
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/flash.h>
+#include <zephyr/pm/device.h>
+
+int main(void)
+{
+    const struct device *flash = DEVICE_DT_GET(DT_NODELABEL(w25q32));
+    uint8_t id[3];
+
+    flash_read_jedec_id(flash, id);                   // 发 0x9F，收 3 个字节
+    printk("JEDEC ID: %02X %02X %02X\\n", id[0], id[1], id[2]);
+
+    pm_device_action_run(flash, PM_DEVICE_ACTION_SUSPEND);   // 用完就让 Flash 进掉电模式
+    k_sleep(K_FOREVER);
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "iom_pins_enable": "DEVICE_DT_GET(DT_NODELABEL(w25q32))",
+    "am_hal_iom_configure": "DEVICE_DT_GET(DT_NODELABEL(w25q32))",
+    "blocking_transfer(g_iom, &rdid)": "flash_read_jedec_id",
+    "am_hal_iom_disable": "PM_DEVICE_ACTION_SUSPEND",
+    "SLEEP_DEEP": "K_FOREVER",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "Read SPI flash",
+    tag: "SPI",
+    lede: "SPI is faster than I2C and uses 4 wires: clock SCK, MOSI (controller out), MISO (controller in) and chip select CS. Almost every SPI flash answers command 0x9F with a 3-byte JEDEC ID (maker, type, size). Read the right ID and you know the wiring and timing are right.",
+    features: [
+      "Press \"Run\": IOM0 becomes SPI, 0x9F goes out, the ID is printed, then IOM shuts down and the chip deep-sleeps",
+      "EF 40 16 = Winbond, SPI NOR, 32 Mbit (4 MB)",
+      "Powering peripherals off after use is basic low-power practice: watch the scope drop back to 1 µA",
+    ],
+    pins: [
+      ["IOM0 SCK/MOSI/MISO/CS", "am_bsp_iom_pins_enable(0, …)", "The BSP sets up IOM0's 4 SPI wires for you"],
+    ],
+    callouts: [
+      {},
+      { title: "IOM0 (SPI)", text: "SCK, MOSI, MISO, CS" },
+    ],
+  },
+
   // 剧本：一步步配 SPI → 发 0x9F → 打印 → 关电 → 深睡
   behavior(ctx) {
     ctx.power('active')

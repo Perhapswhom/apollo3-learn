@@ -42,6 +42,72 @@ void loop(int32_t now_ms)
         am_hal_gpio_state_write(AM_BSP_GPIO_LED2, AM_HAL_GPIO_OUTPUT_SET);   // 红灯
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版：TFLM 是 Zephyr 的可选模块（west config manifest.project-filter -- +tflite-micro）
+// 推理部分和 HAL 版一样；收声音那层用第 18 课的写法。文件要用 .cpp
+// prj.conf：CONFIG_CPP=y  CONFIG_REQUIRES_FULL_LIBCPP=y  CONFIG_TENSORFLOW_LITE_MICRO=y
+#include <cstring>
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/gpio.h>
+#include "tensorflow/lite/micro/micro_interpreter.h"
+#include "recognize_commands.h"
+
+static const struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios);
+static const struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(DT_ALIAS(led2), gpios);
+
+// 每 100 ms 跑一次：声音 → 特征 → 模型 → 判断是哪个词
+void loop(int32_t now_ms)
+{
+    feature_provider->PopulateFeatureData(now_ms);   // 最近 1 秒声音 → 频谱特征
+    interpreter->Invoke();                            // 模型推理
+
+    const char *found;
+    uint8_t score;
+    bool is_new;
+    recognizer->ProcessLatestResults(output, now_ms, &found, &score, &is_new);
+
+    if (is_new && strcmp(found, "yes") == 0)
+        gpio_pin_set_raw(led1.port, led1.pin, 1);    // 绿灯
+    if (is_new && strcmp(found, "no") == 0)
+        gpio_pin_set_raw(led2.port, led2.pin, 1);    // 红灯
+}
+
+int main(void)
+{
+    gpio_pin_configure_dt(&led1, GPIO_OUTPUT);
+    gpio_pin_configure_dt(&led2, GPIO_OUTPUT);
+    // 模型、特征提取、麦克风的初始化照 micro_speech 例程（略）
+
+    while (1) {
+        loop(k_uptime_get_32());
+        k_msleep(100);              // 两次推理之间让内核去睡
+    }
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "LED1, AM_HAL": "led1.port, led1.pin, 1",
+    "LED2, AM_HAL": "led2.port, led2.pin, 1",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "Hear \"yes\" and \"no\"",
+    tag: "Edge AI",
+    lede: "The small micro_speech model from TensorFlow Lite Micro understands \"yes\" and \"no\" right on the chip, with no network. Every short while it turns the last 1 s of audio into a spectrogram (a \"voice print\"), feeds it to the model, and the model scores yes, no or something else.",
+    features: [
+      "Press \"Run\", then click the mic module: like saying one word to it (yes and no take turns)",
+      "Hearing yes lights the green LED (LED1); no lights the red LED (LED2)",
+      "Assumes one inference every 100 ms, 20 ms awake each. Function names follow the TFLM micro_speech example",
+    ],
+    pins: [
+      ["LED1 / LED2", "AM_BSP_GPIO_LED1 / LED2", "green = yes, red = no"],
+    ],
+    callouts: [
+      { title: "PDM mic (click to speak)", text: "One click = one word" },
+    ],
+  },
+
   // 剧本：每 100 ms 醒 20 ms 推理；点麦克风 = 说一个词
   behavior(ctx) {
     let say = 'yes'

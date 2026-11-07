@@ -40,6 +40,50 @@ int main(void)
     }
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版 · west build -b apollo3_evb
+// prj.conf：CONFIG_PM=y  CONFIG_PM_DEVICE=y
+#include <zephyr/kernel.h>
+#include <zephyr/pm/device.h>
+
+int main(void)
+{
+    // 时钟和低功耗初始化：Zephyr 启动时 soc.c 已经做好，这里不用写
+    const struct device *uart = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
+
+    printk("Hello, Apollo3 Blue!\\n");                      // 控制台 = uart0 → J-Link → 电脑
+    pm_device_action_run(uart, PM_DEVICE_ACTION_SUSPEND);  // 说完就关串口，省电
+
+    while (1) {
+        k_sleep(K_FOREVER);         // 没事干就睡：内核空闲时自动进深睡
+    }
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "clkgen_control": "时钟和低功耗初始化",
+    "low_power_init": "时钟和低功耗初始化",
+    "printf_enable": "DT_CHOSEN(zephyr_console)",
+    "stdio_printf": "printk(",
+    "printf_disable": "PM_DEVICE_ACTION_SUSPEND",
+    "SLEEP_DEEP": "K_FOREVER",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "Meet Apollo3 Blue",
+    tag: "Basics",
+    lede: "The square chip in the middle of the board is the star: Cortex-M4F core, BLE 5 radio and 1 MB of flash all live inside. Its biggest talent is saving power: it finishes its work, sleeps right away, and draws only about 1 µA while asleep.",
+    features: [
+      "Click parts on the 3D board to see what they do",
+      "Press \"Run\": the chip boots, says hello, then goes to sleep",
+      "Watch the current scope below: awake and asleep differ by hundreds of times",
+    ],
+    pins: [
+      ["UART TX", "AM_BSP_GPIO_COM_UART_TX", "printf text leaves here and reaches the PC as a USB serial port via J-Link"],
+    ],
+  },
+
   // 剧本：真实开机只要几毫秒，这里放慢到每步 0.4 秒，方便看清
   behavior(ctx) {
     ctx.power('active')

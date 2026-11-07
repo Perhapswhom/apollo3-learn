@@ -55,6 +55,49 @@ int main(void)
     }
 }`,
 
+  // 第 18 步：Zephyr 写法（代码区可以切换）
+  zephyr: `// Zephyr 版：k_msleep() 让出 CPU，内核空闲时自动深睡，到点由 STIMER 叫醒
+// prj.conf：CONFIG_PM=y
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/gpio.h>
+
+#define WAKE_MS  {{period}}
+
+static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+
+int main(void)
+{
+    gpio_pin_configure_dt(&led, GPIO_OUTPUT);
+
+    while (1) {
+        k_msleep(WAKE_MS);              // 睡！内核替你定好 STIMER 闹钟
+        gpio_pin_toggle_dt(&led);       // 闹钟响了：翻转 LED
+    }
+    return 0;
+}`,
+  // 剧本高亮 HAL 版某一行时，Zephyr 版改高亮哪一行（没列出的就找同样的字）
+  zephyrLines: {
+    "SLEEP_DEEP": "k_msleep(WAKE_MS)",
+    "OUTPUT_TOGGLE": "gpio_pin_toggle_dt",
+  },
+
+  // 第 19 步：英文版（英文模式下盖掉上面的中文；没写的字段沿用中文）
+  en: {
+    title: "Put the chip to sleep",
+    tag: "Low power",
+    lede: "Same blinking, but no busy-waiting: set an \"alarm\" (STIMER, clocked by the 32.768 kHz crystal), deep-sleep, wake when it fires to toggle the LED, then sleep again. Awake time is tiny, so the average current drops to a few µA.",
+    features: [
+      "Compare with lesson 2: same blinking, but the average current on the scope is over 100× lower",
+      "Lengthen the \"Alarm interval\" for lower average current and longer battery life",
+      "The script assumes each wake does 1 ms of work (often shorter in reality)",
+    ],
+    pins: [
+      ["LED0", "AM_BSP_GPIO_LED0", "On-board LED"],
+      ["32.768 kHz", "XT (crystal)", "STIMER clock source; keeps running in deep sleep"],
+    ],
+    params: { period: "Alarm interval" },
+  },
+
   // 剧本：大部分时间在睡，每个周期醒来 1 ms
   behavior(ctx, p) {
     let on = false
