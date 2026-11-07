@@ -1,0 +1,211 @@
+/* ============ 1. 颜色和字体：全站只在这里改 ============ */
+:root {
+  --paper: #f6f0e4;      /* 米黄纸底 */
+  --paper-2: #ece2d0;
+  --card: #fffdf8;       /* 卡片底色 */
+  --line: #e2d6c2;       /* 细线 */
+  --ink: #1f2a37;        /* 主文字 */
+  --ink-2: #5b6474;      /* 次要文字 */
+  --accent: #0e9384;     /* 主色：青绿 */
+  --accent-soft: #d5efe9;
+  --hot: #fde9c8;        /* 代码高亮行 */
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+}
+button { font: inherit; color: inherit; }
+.hidden { display: none !important; }
+.muted { color: var(--ink-2); font-size: 12px; }
+
+/* ============ 2. 大格子布局：像报纸排版 ============ */
+#app {
+  height: 100vh;
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  grid-template-columns: 76px minmax(0, 1fr) clamp(320px, 32vw, 440px);
+  grid-template-rows: 64px minmax(0, 1fr) 108px;
+  grid-template-areas:
+    "top  top     top"
+    "nav  stage   panel"
+    "nav  lessons lessons";
+}
+.topbar   { grid-area: top; }
+.sidenav  { grid-area: nav; }
+.stage    { grid-area: stage; }
+.panel    { grid-area: panel; }
+.lessonbar{ grid-area: lessons; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+/* ============ 3. 顶栏 ============ */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 12px; padding-left: 8px; }
+.brand-mark {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: var(--accent); color: #fff;
+  display: grid; place-items: center; font: 700 17px var(--mono);
+}
+.brand-name { font-size: 24px; font-weight: 700; letter-spacing: .04em; }
+.brand-name b { color: var(--accent); }
+.brand-sub { font-size: 12px; color: var(--ink-2); letter-spacing: .3em; }
+.progress {
+  width: clamp(320px, 32vw, 440px); height: 100%;
+  display: flex; align-items: center; gap: 12px; padding: 0 16px;
+}
+.progress-label { white-space: nowrap; }
+.progress-bar { flex: 1; height: 8px; background: var(--paper-2); border-radius: 99px; overflow: hidden; }
+#progress-fill { display: block; height: 100%; width: 0; background: var(--accent); transition: width .4s; }
+#progress-text { font: 600 14px var(--mono); }
+
+/* ============ 4. 左侧导航 ============ */
+.sidenav { display: flex; flex-direction: column; gap: 8px; }
+.nav-item {
+  height: 56px; border: 1px solid transparent; border-radius: 12px;
+  background: transparent; color: var(--ink-2); cursor: pointer; font-size: 13px;
+}
+.nav-item.active { background: var(--card); border-color: var(--line); color: var(--accent); font-weight: 600; }
+
+/* ============ 5. 3D 舞台 ============ */
+.stage { position: relative; overflow: hidden; background: #fbf6ec; }
+#stage { position: absolute; inset: 0; }
+#stage canvas { display: block; width: 100%; height: 100%; }
+#callout-lines, #callouts { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+.callout {
+  position: absolute; transform: translate(-50%, -50%);
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 6px 10px; font-size: 12px; line-height: 1.45;
+  width: max-content; max-width: 220px;
+  box-shadow: 0 6px 16px rgba(31, 42, 55, .08);
+  pointer-events: auto; cursor: pointer;
+}
+.callout b { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.callout b::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.callout span { display: block; color: var(--ink-2); margin-top: 2px; }
+.callout.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.stage-hint {
+  position: absolute; right: 12px; bottom: 12px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 99px;
+  padding: 4px 12px; font-size: 12px; color: var(--ink-2);
+}
+
+/* ============ 6. 右侧面板 ============ */
+.panel { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: auto; }
+.info { padding: 12px 16px 14px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tab {
+  border: 0; background: none; padding: 6px 10px; cursor: pointer;
+  color: var(--ink-2); border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab.active { color: var(--ink); border-color: var(--accent); font-weight: 600; }
+#lesson-title { font-size: 20px; margin: 12px 0 6px; }
+#lesson-lede { margin: 0 0 8px; color: var(--ink-2); line-height: 1.6; font-size: 14px; }
+#lesson-features { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.8; }
+#lesson-pins { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+#lesson-pins td { padding: 6px 4px; border-bottom: 1px solid var(--paper-2); vertical-align: top; }
+#lesson-pins code { font-family: var(--mono); font-size: 12px; background: var(--paper); padding: 1px 4px; border-radius: 4px; }
+
+.code { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.card-head { display: flex; align-items: center; justify-content: space-between; }
+.card-head h3 { margin: 0; font-size: 15px; }
+.run-btn {
+  background: var(--accent); color: #fff; border: 0; border-radius: 8px;
+  padding: 6px 14px; font-weight: 600; font-size: 13px; cursor: pointer;
+}
+.run-btn.running { background: #c2410c; }
+#code-view {
+  margin: 0; background: #fbf7ef; border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px 0; font: 12px/1.65 var(--mono); overflow: auto; max-height: 228px;
+}
+.ln { display: block; white-space: pre; padding-right: 12px; transition: background .25s; }
+.ln::before {
+  content: attr(data-n); display: inline-block; width: 2.4em; padding-right: 10px;
+  text-align: right; color: #b3a993;
+}
+.ln.hot { background: var(--hot); }
+.t-com { color: #8a8f98; font-style: italic; }
+.t-str { color: #b45309; }
+.t-kw  { color: #7c3aed; }
+.t-num { color: #0e7490; }
+.t-fn  { color: var(--accent); }
+.t-pre { color: #be185d; }
+.t-param { background: var(--accent-soft); color: var(--accent); border-radius: 4px; padding: 0 3px; font-weight: 700; }
+#params { display: flex; flex-direction: column; gap: 6px; }
+.param { display: grid; grid-template-columns: auto 1fr 64px; gap: 10px; align-items: center; font-size: 13px; }
+.param input { accent-color: var(--accent); }
+.param output { font: 600 12px var(--mono); text-align: right; }
+.serial {
+  background: #1f2a37; color: #c8f7e8; font: 12px/1.5 var(--mono);
+  border-radius: 10px; padding: 8px 10px; height: 76px; overflow: auto; white-space: pre-wrap;
+}
+.serial:empty::before { content: "串口输出会显示在这里"; color: #6b7a8c; }
+
+/* 电流示波器：浮在舞台左下角 */
+.scope {
+  position: absolute; left: 12px; bottom: 12px; width: 300px; padding: 10px 12px;
+  background: rgba(255, 253, 248, .95); box-shadow: 0 8px 24px rgba(31, 42, 55, .08);
+}
+#scope-canvas { width: 100%; height: 84px; display: block; margin-top: 6px; }
+.scope-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+.stat { background: var(--paper); border-radius: 8px; padding: 4px 8px; }
+.stat small { display: block; color: var(--ink-2); font-size: 11px; }
+.stat b { font: 600 13px var(--mono); }
+.scope-note { font-size: 10.5px; color: var(--ink-2); margin: 6px 0 0; line-height: 1.45; }
+
+/* ============ 7. 底部课程条 ============ */
+.lessonbar { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.lessonbar-title { font-weight: 600; writing-mode: vertical-rl; color: var(--ink-2); }
+#lesson-list { display: flex; gap: 12px; overflow-x: auto; flex: 1; padding: 6px 2px; }
+.lesson-card {
+  text-decoration: none; color: inherit;
+  flex: 0 0 210px; height: 84px; display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; text-align: left; cursor: pointer;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+}
+.lesson-card.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.lesson-no {
+  flex: none; width: 38px; height: 38px; border-radius: 10px; background: var(--paper-2);
+  display: grid; place-items: center; font: 700 15px var(--mono);
+}
+.lesson-card.done .lesson-no { background: var(--accent); color: #fff; }
+.lesson-name { font-weight: 600; font-size: 14px; }
+.lesson-tag { font-size: 12px; color: var(--ink-2); }
+
+/* 屏幕矮（比如 13 寸笔记本）：示波器缩小一点 */
+@media (max-height: 800px) {
+  .scope { width: 260px; }
+  #scope-canvas { height: 60px; }
+  .scope-note { display: none; }
+}
+
+/* ============ 8. 窄屏（手机/小窗口）：改成上下排 ============ */
+@media (max-width: 900px) {
+  #app {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 56vh auto auto;
+    grid-template-areas: "top" "stage" "panel" "lessons";
+  }
+  .sidenav, .brand-sub, .lessonbar-title, .progress-label, .stage-hint { display: none; }
+  .brand-mark { width: 36px; height: 36px; font-size: 14px; }
+  .brand-name { font-size: 16px; }
+  .progress { width: auto; flex: 0 1 160px; height: 44px; }
+  .panel { overflow: visible; }
+  .callout span { display: none; }  /* 手机上标注只留标题 */
+  /* 示波器挪到舞台正下方（不再盖住板子） */
+  .stage { overflow: visible; margin-bottom: 170px; }
+  .scope { top: calc(100% + 12px); bottom: auto; left: 0; right: 0; width: auto; }
+  #scope-canvas { height: 56px; }
+  .scope-note { display: none; }
+}
